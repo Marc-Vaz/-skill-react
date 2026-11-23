@@ -1,0 +1,6 @@
+{
+  "name": "FrameHook — Plugin de Remotion para Agentes IA",
+  "description": "Estudio y plugin programático para conectar agentes de IA con Remotion, validar datos estructurados y automatizar el renderizado de videos dinámicos personalizados.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
