@@ -7,6 +7,8 @@ import {
   RotateCcw,
   Repeat,
   Camera,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import {
   ASPECT_RATIOS,
@@ -16,6 +18,7 @@ import {
   type AspectRatioId,
   type CompositionProps,
   type TemplateId,
+  type VideoSkin,
 } from '../lib/schemas';
 import { formatTimecode, getActiveSequences } from '../lib/motionMath';
 import { renderCompositionFrame } from '../remotion/renderFrame';
@@ -25,6 +28,7 @@ interface RemotionStageProps {
   aspectRatio: AspectRatioId;
   onAspectRatioChange: (ratio: AspectRatioId) => void;
   props: CompositionProps;
+  onSkinChange: (skin: VideoSkin) => void;
   frame: number;
   onFrameChange: (frame: number) => void;
   isPlaying: boolean;
@@ -41,6 +45,7 @@ export const RemotionStage: React.FC<RemotionStageProps> = ({
   aspectRatio,
   onAspectRatioChange,
   props,
+  onSkinChange,
   frame,
   onFrameChange,
   isPlaying,
@@ -168,35 +173,79 @@ export const RemotionStage: React.FC<RemotionStageProps> = ({
             <span className="tabular-nums">
               {(template.durationInFrames / template.fps).toFixed(1)}s
             </span>
+            <span aria-hidden="true">·</span>
+            <span>Skin: {props.skin === 'day' ? 'Día' : 'Noche'}</span>
           </div>
         </div>
 
-        {/* Aspect ratio segmented control */}
-        <div
-          className="inline-flex items-center gap-1 rounded-lg bg-slate-100 p-1 border border-slate-200"
-          role="group"
-          aria-label="Relación de aspecto del video"
-        >
-          {(['16:9', '9:16', '1:1'] as AspectRatioId[]).map((ratio) => (
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Quick Day / Night Skin Toggle */}
+          <div
+            className="inline-flex items-center gap-1 rounded-lg bg-slate-100 p-1 border border-slate-200"
+            role="group"
+            aria-label="Skin de día o noche"
+          >
             <button
-              key={ratio}
               type="button"
-              onClick={() => onAspectRatioChange(ratio)}
-              aria-pressed={aspectRatio === ratio}
-              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
-                aspectRatio === ratio
+              onClick={() => onSkinChange('day')}
+              aria-pressed={props.skin === 'day'}
+              className={`inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-md transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+                props.skin === 'day'
                   ? 'bg-white text-slate-900 shadow-xs'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              {ratio}
+              <Sun className="w-3.5 h-3.5 text-amber-500" />
+              <span>Día</span>
             </button>
-          ))}
+            <button
+              type="button"
+              onClick={() => onSkinChange('night')}
+              aria-pressed={(props.skin ?? 'night') === 'night'}
+              className={`inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-md transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+                (props.skin ?? 'night') === 'night'
+                  ? 'bg-slate-900 text-white shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <Moon className="w-3.5 h-3.5" />
+              <span>Noche</span>
+            </button>
+          </div>
+
+          {/* Aspect ratio segmented control */}
+          <div
+            className="inline-flex items-center gap-1 rounded-lg bg-slate-100 p-1 border border-slate-200"
+            role="group"
+            aria-label="Relación de aspecto del video"
+          >
+            {(['16:9', '9:16', '1:1'] as AspectRatioId[]).map((ratio) => (
+              <button
+                key={ratio}
+                type="button"
+                onClick={() => onAspectRatioChange(ratio)}
+                aria-pressed={aspectRatio === ratio}
+                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+                  aspectRatio === ratio
+                    ? 'bg-white text-slate-900 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                {ratio}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
       {/* Cinema Matte Viewport */}
-      <div className="rounded-xl border border-slate-200 bg-[#0C0F14] p-4 sm:p-6 flex items-center justify-center min-h-[340px] lg:min-h-[430px] relative overflow-hidden">
+      <div
+        className={`rounded-xl border p-4 sm:p-6 flex items-center justify-center min-h-[340px] lg:min-h-[430px] relative overflow-hidden transition-colors ${
+          props.skin === 'day'
+            ? 'border-slate-300 bg-slate-200/75'
+            : 'border-slate-200 bg-[#0C0F14]'
+        }`}
+      >
         <div
           className="relative flex items-center justify-center w-full"
           style={{
@@ -211,7 +260,12 @@ export const RemotionStage: React.FC<RemotionStageProps> = ({
             data-frame={frame}
             data-template={templateId}
             data-ratio={aspectRatio}
-            className="w-full h-auto rounded-lg border border-white/10 block shadow-sm"
+            data-skin={props.skin ?? 'night'}
+            className={`w-full h-auto rounded-lg block shadow-sm ${
+              props.skin === 'day'
+                ? 'border border-slate-300'
+                : 'border border-white/10'
+            }`}
           />
         </div>
 

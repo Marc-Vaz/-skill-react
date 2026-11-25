@@ -129,6 +129,10 @@ const agentPluginTools: FunctionDeclaration[] = [
           description: 'Formato del video: "16:9", "9:16" o "1:1".',
         },
         brandName: { type: Type.STRING, description: 'Nombre de la empresa o marca.' },
+        skin: {
+          type: Type.STRING,
+          description: 'Tema o skin visual del video: "day" (día / claro) o "night" (noche / oscuro).',
+        },
         accentColor: {
           type: Type.STRING,
           description: 'Color hexadecimal de acento de 6 dígitos (ej. #E14D2A, #0D9488, #2563EB).',
@@ -213,6 +217,10 @@ const agentPluginTools: FunctionDeclaration[] = [
               authorName: { type: Type.STRING },
               authorRole: { type: Type.STRING },
               statHighlight: { type: Type.STRING },
+              skin: {
+                type: Type.STRING,
+                description: 'Skin del video: "day" o "night".',
+              },
               accentColor: { type: Type.STRING },
               ctaText: { type: Type.STRING },
             },
@@ -243,6 +251,9 @@ function normalizeAgentArgsToProps(
   }
   if (typeof merged.accentColor !== 'string' || !/^#[0-9A-Fa-f]{6}$/.test(merged.accentColor)) {
     merged.accentColor = (defaults.accentColor as string) || '#E14D2A';
+  }
+  if (merged.skin !== 'day' && merged.skin !== 'night') {
+    merged.skin = (defaults.skin as string) || 'night';
   }
   return merged;
 }

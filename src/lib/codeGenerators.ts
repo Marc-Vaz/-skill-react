@@ -172,9 +172,12 @@ export const ${tpl.compositionId}: React.FC<Record<string, unknown>> = (props) =
     extrapolateRight: "clamp",
   });
   const voiceover = props.voiceover as { enabled?: boolean; audioUrl?: string } | undefined;
+  const isDaySkin = props.skin === "day";
+  const bgColor = isDaySkin ? "#F8FAFC" : "#0C0F14";
+  const textColor = isDaySkin ? "#0F172A" : "#F8FAFC";
 
   return (
-    <AbsoluteFill style={{ backgroundColor: "#0C0F14", color: "#F8FAFC", padding: 64 }}>${
+    <AbsoluteFill style={{ backgroundColor: bgColor, color: textColor, padding: 64 }}>${
       hasAudio
         ? `
       {voiceover?.enabled && voiceover?.audioUrl ? (
@@ -256,3 +259,142 @@ curl -X POST http://localhost:3000/api/plugin/render \\
 # 3. Comando equivalente en Remotion CLI para renderizado MP4 con audio
 ${cli}`;
 }
+
+export interface SkillMarkdownOptions {
+  panoraPath?: string;
+  factoryPath?: string;
+  framehookPath?: string;
+}
+
+export function generateSkillMarkdown(
+  templateId: TemplateId,
+  aspectRatio: AspectRatioId,
+  props: CompositionProps,
+  options: SkillMarkdownOptions = {}
+): string {
+  const tpl = TEMPLATES[templateId];
+  const dims = ASPECT_RATIOS[aspectRatio];
+  const panoraPath = options.panoraPath ?? '../remotion-panora-mcp';
+  const factoryPath = options.factoryPath ?? '../remotion-video-factory';
+  const framehookPath = options.framehookPath ?? '../framehook';
+  const voice = props.voiceover?.voice || 'es-MX-DaliaNeural';
+  const script =
+    props.voiceover?.script ||
+    `Locución generada por FrameHook para ${props.brandName}.`;
+  const audioFile = (props.voiceover?.audioUrl || '/audio/voiceover.mp3').replace(/^\//, '');
+  const skin = props.skin ?? 'night';
+  const cli = buildRemotionCliCommand(templateId, aspectRatio, `out/${templateId}-${skin}.mp4`);
+  const payloadJson = JSON.stringify(props, null, 2);
+
+  return `---
+name: framehook
+description: >
+  Estudio visual de Remotion, cola de renderizado por lotes y Editor/Exportador de Skills con locución mexicana edge-tts y soporte de skin Día/Noche ("day" | "night"). Úsalo cuando el agente IA necesite transformar datos estructurados JSON/CSV en composiciones Remotion validadas o coordinarse con remotion-panora-mcp y remotion-video-factory.
+---
+
+# FrameHook — Skill de Remotion para Agentes IA
+
+**FrameHook** actúa como el puente de datos estructurados, previsualización determinista y orquestación por lotes dentro de tu arquitectura de producción Remotion.
+
+## Arquitectura de carpetas hermanas
+
+- \`${framehookPath}/\` ➔ **Estudio visual FrameHook**, cola por lotes, validación Zod (\`skin: "day" | "night"\`) y Editor/Exportador de Skills con \`edge-tts\`.
+- \`${panoraPath}/\` ➔ **Librería Panora MCP** con 399 widgets animados deterministas invocables en escenas Remotion.
+- \`${factoryPath}/\` ➔ **Motor central Remotion Video Factory** para renderizado final de producciones documentales, cápsulas y videos largos.
+
+## Capacidades principales de la Skill
+
+1. **Validación estricta de Props (Zod)**: Verifica que cada payload cumpla con la plantilla activa (\`${tpl.id}\` ➔ \`${tpl.compositionId}\`) antes de invocar el renderizador.
+2. **Parámetro \`skin\` Día / Noche**:
+   - \`"day"\`: Paleta editorial luminosa (\`#F8FAFC\`) con tarjetas blancas y tipografía oscura (\`#0F172A\`).
+   - \`"night"\`: Paleta de estudio oscuro (\`#0C0F14\`) con alto contraste y acentos cromáticos.
+3. **Locución mexicana local (\`edge-tts\`)**: Síntesis neural con voces \`es-MX-DaliaNeural\`, \`es-MX-JorgeNeural\`, \`es-MX-BeatrizNeural\`, \`es-MX-CandelaNeural\` y \`es-MX-CecilioNeural\` sincronizadas mediante \`<Audio src={staticFile(...)} />\`.
+
+## Plantilla activa: \`${tpl.compositionId}\` (\`${tpl.id}\`)
+
+- **Resolución y formato**: \`${dims.width}x${dims.height}\` (\`${aspectRatio}\`) a \`${tpl.fps} fps\` (\`${tpl.durationInFrames}\` fotogramas).
+- **Skin configurada**: \`"${skin}"\`
+- **Voz \`edge-tts\`**: \`${voice}\`
+
+### 1. Payload JSON validado (\`payload.json\`)
+
+\`\`\`json
+${payloadJson}
+\`\`\`
+
+### 2. Flujo de ejecución para el Agente IA
+
+\`\`\`bash
+# Paso A: Generar audio neural mexicano con edge-tts
+edge-tts --voice "${voice}" \\
+  --text "${script.replace(/"/g, '\\"')}" \\
+  --write-media "public/${audioFile}"
+
+# Paso B: Validar y encolar en FrameHook Studio API
+curl -X POST http://localhost:3000/api/plugin/render \\
+  -H "Content-Type: application/json" \\
+  -d '{"templateId":"${tpl.id}","aspectRatio":"${aspectRatio}","records":[${JSON.stringify(props)}]}'
+
+# Paso C: Renderizar MP4 en ${factoryPath} o entorno local Remotion
+${cli}
+\`\`\`
+`;
+}
+
+export function buildFrameHookBundleEntries(
+  templateId: TemplateId,
+  aspectRatio: AspectRatioId,
+  props: CompositionProps,
+  customSkillMarkdown?: string
+): Array<{ path: string; content: string }> {
+  const tpl = TEMPLATES[templateId];
+  const skillMd =
+    customSkillMarkdown ?? generateSkillMarkdown(templateId, aspectRatio, props);
+
+  const readmeMd = `# FrameHook Plugin Package (${tpl.compositionId})
+
+Instalación recomendada en tu arquitectura local de 3 carpetas hermanas:
+
+\`\`\`text
+workspace/
+├── framehook/                # Estudio visual, cola por lotes y Editor de SKILL.md + edge-tts
+├── remotion-panora-mcp/      # Librería de 399 widgets animados deterministas
+└── remotion-video-factory/   # Motor central de renderizado Remotion
+\`\`\`
+
+## Archivos incluidos en este paquete
+
+- \`framehook/SKILL.md\`: Definición de la Skill para que tu agente IA invoque FrameHook, \`edge-tts\` y Remotion CLI.
+- \`framehook/remotion/${tpl.compositionId}.tsx\`: Composición React + Remotion con soporte de \`skin: "day" | "night"\` y \`<Audio />\`.
+- \`framehook/mcp/framehook-mcp-${templateId}.ts\`: Servidor Model Context Protocol (MCP).
+- \`framehook/tools/framehook-tools-${templateId}.json\`: Esquema de herramientas para Gemini Function Calling.
+- \`framehook/payloads/${templateId}-payload.json\`: Datos estructurados validados con Zod.
+- \`framehook/scripts/render-${templateId}.sh\`: Script de síntesis \`edge-tts\` + renderizado Remotion CLI.
+`;
+
+  return [
+    { path: 'framehook/SKILL.md', content: skillMd },
+    { path: 'framehook/README.md', content: readmeMd },
+    {
+      path: `framehook/remotion/${tpl.compositionId}.tsx`,
+      content: generateRemotionTsx(templateId, aspectRatio, props),
+    },
+    {
+      path: `framehook/mcp/framehook-mcp-${templateId}.ts`,
+      content: generateMcpServerCode(templateId, aspectRatio),
+    },
+    {
+      path: `framehook/tools/framehook-tools-${templateId}.json`,
+      content: generateAgentToolManifest(templateId, aspectRatio),
+    },
+    {
+      path: `framehook/payloads/${templateId}-payload.json`,
+      content: JSON.stringify(props, null, 2),
+    },
+    {
+      path: `framehook/scripts/render-${templateId}.sh`,
+      content: generateRestSnippet(templateId, aspectRatio, props),
+    },
+  ];
+}
+

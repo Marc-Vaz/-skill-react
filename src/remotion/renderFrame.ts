@@ -10,6 +10,7 @@ import {
   type ProductLaunchProps,
   type SocialQuoteProps,
   type TemplateId,
+  type VideoSkin,
 } from '../lib/schemas';
 
 export interface RenderFrameParams {
@@ -23,6 +24,53 @@ export interface RenderFrameParams {
   props: CompositionProps;
   productImage?: HTMLImageElement | null;
   backdropImage?: HTMLImageElement | null;
+}
+
+interface SkinPalette {
+  bg: string;
+  bgFadeTarget: string;
+  gridLine: string;
+  progressTrack: string;
+  textPrimary: string;
+  textSecondary: string;
+  textMuted: string;
+  cardBg: string;
+  cardBorder: string;
+  barTrack: string;
+  backdropAlpha: number;
+}
+
+const SKIN_PALETTES: Record<VideoSkin, SkinPalette> = {
+  night: {
+    bg: '#0C0F14',
+    bgFadeTarget: 'rgba(12, 15, 20, 0)',
+    gridLine: 'rgba(255, 255, 255, 0.045)',
+    progressTrack: 'rgba(255, 255, 255, 0.12)',
+    textPrimary: '#F8FAFC',
+    textSecondary: 'rgba(226, 232, 240, 0.78)',
+    textMuted: 'rgba(248, 250, 252, 0.58)',
+    cardBg: 'rgba(255, 255, 255, 0.05)',
+    cardBorder: 'rgba(255, 255, 255, 0.12)',
+    barTrack: 'rgba(255, 255, 255, 0.11)',
+    backdropAlpha: 0.24,
+  },
+  day: {
+    bg: '#F8FAFC',
+    bgFadeTarget: 'rgba(248, 250, 252, 0)',
+    gridLine: 'rgba(15, 23, 42, 0.055)',
+    progressTrack: 'rgba(15, 23, 42, 0.12)',
+    textPrimary: '#0F172A',
+    textSecondary: '#334155',
+    textMuted: '#64748B',
+    cardBg: 'rgba(255, 255, 255, 0.92)',
+    cardBorder: 'rgba(15, 23, 42, 0.12)',
+    barTrack: 'rgba(15, 23, 42, 0.1)',
+    backdropAlpha: 0.06,
+  },
+};
+
+function getPalette(skin?: VideoSkin): SkinPalette {
+  return skin === 'day' ? SKIN_PALETTES.day : SKIN_PALETTES.night;
 }
 
 function drawRoundedRect(
@@ -102,14 +150,15 @@ function drawStageBackground(
   height: number,
   accentColor: string,
   frame: number,
+  palette: SkinPalette,
   backdropImage?: HTMLImageElement | null
 ) {
-  ctx.fillStyle = '#0C0F14';
+  ctx.fillStyle = palette.bg;
   ctx.fillRect(0, 0, width, height);
 
   if (backdropImage && backdropImage.complete && backdropImage.naturalWidth > 0) {
     ctx.save();
-    ctx.globalAlpha = 0.24;
+    ctx.globalAlpha = palette.backdropAlpha;
     const subtleZoom = 1 + interpolate(frame, [0, 180], [0, 0.06], { extrapolateRight: 'clamp' });
     drawImageCover(ctx, backdropImage, 0, 0, width, height, subtleZoom);
     ctx.restore();
@@ -117,7 +166,7 @@ function drawStageBackground(
 
   // Subtle architectural grid lines
   ctx.save();
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.045)';
+  ctx.strokeStyle = palette.gridLine;
   ctx.lineWidth = 1;
   const step = Math.round(Math.min(width, height) / 10);
   for (let x = step; x < width; x += step) {
@@ -144,13 +193,13 @@ function drawStageBackground(
     Math.max(width, height) * 0.55
   );
   grad.addColorStop(0, `${accentColor}26`);
-  grad.addColorStop(1, 'rgba(12, 15, 20, 0)');
+  grad.addColorStop(1, palette.bgFadeTarget);
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, width, height);
 
   // Thin top progress hairline
   const progress = Math.min(1, Math.max(0, frame / 179));
-  ctx.fillStyle = 'rgba(255,255,255,0.12)';
+  ctx.fillStyle = palette.progressTrack;
   ctx.fillRect(0, 0, width, 4);
   ctx.fillStyle = accentColor;
   ctx.fillRect(0, 0, width * progress, 4);
@@ -164,7 +213,8 @@ function drawFooterBar(
   ctaText: string,
   accentColor: string,
   frame: number,
-  fps: number
+  fps: number,
+  palette: SkinPalette
 ) {
   const pad = Math.round(Math.min(width, height) * 0.065);
   const outroAnim = spring({ frame, fps, delay: 132, config: { damping: 16, stiffness: 110 } });
@@ -172,7 +222,7 @@ function drawFooterBar(
 
   // Brand watermark footer (quiet)
   ctx.save();
-  ctx.fillStyle = 'rgba(248, 250, 252, 0.58)';
+  ctx.fillStyle = palette.textMuted;
   ctx.font = `500 ${Math.round(Math.min(width, height) * 0.022)}px "Plus Jakarta Sans", sans-serif`;
   ctx.fillText(brandName, pad, barY + 26);
 
@@ -203,7 +253,8 @@ function renderKpiDigest(
   height: number,
   frame: number,
   fps: number,
-  props: KpiDigestProps
+  props: KpiDigestProps,
+  palette: SkinPalette
 ) {
   const isVertical = height > width;
   const pad = Math.round(Math.min(width, height) * 0.07);
@@ -219,7 +270,7 @@ function renderKpiDigest(
   ctx.font = `600 ${Math.round(Math.min(width, height) * 0.024)}px "JetBrains Mono", monospace`;
   ctx.fillText(`${props.brandName}  ·  ${props.period}`, pad, pad + 18 + introShift);
 
-  ctx.fillStyle = 'rgba(248, 250, 252, 0.72)';
+  ctx.fillStyle = palette.textSecondary;
   ctx.font = `500 ${Math.round(Math.min(width, height) * 0.024)}px "Plus Jakarta Sans", sans-serif`;
   ctx.fillText(`Preparado para ${props.recipientName}`, pad, pad + 52 + introShift);
 
@@ -227,7 +278,7 @@ function renderKpiDigest(
   const headlineSize = isVertical
     ? Math.round(width * 0.068)
     : Math.round(height * 0.068);
-  ctx.fillStyle = '#F8FAFC';
+  ctx.fillStyle = palette.textPrimary;
   ctx.font = `700 ${headlineSize}px "Bricolage Grotesque", sans-serif`;
   const lines = wrapTextLines(ctx, props.headline, width - pad * 2, 2);
   lines.forEach((line, idx) => {
@@ -277,20 +328,20 @@ function renderKpiDigest(
       ctx.save();
       ctx.globalAlpha = alpha;
       drawRoundedRect(ctx, cardX, cardY, cardW, cardH, 14);
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
+      ctx.fillStyle = palette.cardBg;
       ctx.fill();
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.11)';
+      ctx.strokeStyle = palette.cardBorder;
       ctx.lineWidth = 1.5;
       ctx.stroke();
 
       // Label
-      ctx.fillStyle = 'rgba(226, 232, 240, 0.72)';
+      ctx.fillStyle = palette.textSecondary;
       ctx.font = `500 ${Math.round(Math.min(width, height) * 0.022)}px "Plus Jakarta Sans", sans-serif`;
       ctx.fillText(metric.label, cardX + 24, cardY + 38, cardW - 48);
 
       // Value
       const valSize = isVertical ? Math.round(width * 0.072) : Math.round(height * 0.072);
-      ctx.fillStyle = '#FFFFFF';
+      ctx.fillStyle = palette.textPrimary;
       ctx.font = `700 ${valSize}px "JetBrains Mono", monospace`;
       ctx.fillText(metric.value, cardX + 24, cardY + 38 + valSize * 1.1, cardW - 48);
 
@@ -309,7 +360,7 @@ function renderKpiDigest(
       const barY = cardY + cardH - 22;
       const barW = cardW - 48;
       drawRoundedRect(ctx, cardX + 24, barY, barW, 8, 4);
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+      ctx.fillStyle = palette.barTrack;
       ctx.fill();
 
       drawRoundedRect(ctx, cardX + 24, barY, Math.max(8, barW * barProgress), 8, 4);
@@ -319,7 +370,7 @@ function renderKpiDigest(
     });
   }
 
-  drawFooterBar(ctx, width, height, props.brandName, props.ctaText, accent, frame, fps);
+  drawFooterBar(ctx, width, height, props.brandName, props.ctaText, accent, frame, fps, palette);
 }
 
 function renderProductLaunch(
@@ -329,6 +380,7 @@ function renderProductLaunch(
   frame: number,
   fps: number,
   props: ProductLaunchProps,
+  palette: SkinPalette,
   productImage?: HTMLImageElement | null
 ) {
   const isVertical = height > width;
@@ -382,7 +434,7 @@ function renderProductLaunch(
   ctx.fillText(props.brandName, textX, textTop + textShift);
 
   const titleSize = isVertical ? Math.round(width * 0.072) : Math.round(height * 0.072);
-  ctx.fillStyle = '#F8FAFC';
+  ctx.fillStyle = palette.textPrimary;
   ctx.font = `700 ${titleSize}px "Bricolage Grotesque", sans-serif`;
   const titleLines = wrapTextLines(ctx, props.productName, textW, 2);
   titleLines.forEach((line, idx) => {
@@ -391,7 +443,7 @@ function renderProductLaunch(
 
   const tagTop = textTop + 56 + titleLines.length * (titleSize * 1.1) + 18;
   const tagSize = Math.round(Math.min(width, height) * 0.026);
-  ctx.fillStyle = 'rgba(226, 232, 240, 0.78)';
+  ctx.fillStyle = palette.textSecondary;
   ctx.font = `400 ${tagSize}px "Plus Jakarta Sans", sans-serif`;
   const tagLines = wrapTextLines(ctx, props.tagline, textW, 3);
   tagLines.forEach((line, idx) => {
@@ -417,14 +469,14 @@ function renderProductLaunch(
       ctx.font = `600 ${Math.round(Math.min(width, height) * 0.021)}px "JetBrains Mono", monospace`;
       ctx.fillText(`0${idx + 1}.`, textX, y);
 
-      ctx.fillStyle = '#F1F5F9';
+      ctx.fillStyle = palette.textPrimary;
       ctx.font = `500 ${Math.round(Math.min(width, height) * 0.022)}px "Plus Jakarta Sans", sans-serif`;
       ctx.fillText(item, textX + 42, y, textW - 46);
       ctx.restore();
     });
   }
 
-  drawFooterBar(ctx, width, height, props.brandName, props.ctaText, accent, frame, fps);
+  drawFooterBar(ctx, width, height, props.brandName, props.ctaText, accent, frame, fps, palette);
 }
 
 function renderOnboarding(
@@ -433,7 +485,8 @@ function renderOnboarding(
   height: number,
   frame: number,
   fps: number,
-  props: PersonalizedOnboardingProps
+  props: PersonalizedOnboardingProps,
+  palette: SkinPalette
 ) {
   const isVertical = height > width;
   const pad = Math.round(Math.min(width, height) * 0.072);
@@ -448,11 +501,11 @@ function renderOnboarding(
   ctx.fillText(`${props.brandName}  ·  ${props.planName}`, pad, pad + 20 + shift);
 
   const titleSize = isVertical ? Math.round(width * 0.074) : Math.round(height * 0.076);
-  ctx.fillStyle = '#F8FAFC';
+  ctx.fillStyle = palette.textPrimary;
   ctx.font = `700 ${titleSize}px "Bricolage Grotesque", sans-serif`;
   ctx.fillText(`Hola, ${props.customerName}`, pad, pad + 92 + shift, width - pad * 2);
 
-  ctx.fillStyle = 'rgba(226, 232, 240, 0.78)';
+  ctx.fillStyle = palette.textSecondary;
   ctx.font = `400 ${Math.round(Math.min(width, height) * 0.028)}px "Plus Jakarta Sans", sans-serif`;
   ctx.fillText(
     `Tu espacio para ${props.companyName} ya está listo con ${props.accountManager}.`,
@@ -480,9 +533,9 @@ function renderOnboarding(
       ctx.save();
       ctx.globalAlpha = Math.max(0, Math.min(1, anim));
       drawRoundedRect(ctx, pad, y, width - pad * 2, stepH, 12);
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
+      ctx.fillStyle = palette.cardBg;
       ctx.fill();
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
+      ctx.strokeStyle = palette.cardBorder;
       ctx.lineWidth = 1.25;
       ctx.stroke();
 
@@ -495,7 +548,7 @@ function renderOnboarding(
       ctx.font = `700 18px "JetBrains Mono", monospace`;
       ctx.fillText(`0${idx + 1}`, pad + 27, y + stepH / 2 + 6);
 
-      ctx.fillStyle = '#F8FAFC';
+      ctx.fillStyle = palette.textPrimary;
       ctx.font = `500 ${Math.round(Math.min(width, height) * 0.026)}px "Plus Jakarta Sans", sans-serif`;
       const stepLines = wrapTextLines(ctx, step, width - pad * 2 - 104, 2);
       stepLines.forEach((line, lIdx) => {
@@ -505,7 +558,7 @@ function renderOnboarding(
     });
   }
 
-  drawFooterBar(ctx, width, height, props.brandName, props.ctaText, accent, frame, fps);
+  drawFooterBar(ctx, width, height, props.brandName, props.ctaText, accent, frame, fps, palette);
 }
 
 function renderSocialQuote(
@@ -514,7 +567,8 @@ function renderSocialQuote(
   height: number,
   frame: number,
   fps: number,
-  props: SocialQuoteProps
+  props: SocialQuoteProps,
+  palette: SkinPalette
 ) {
   const isVertical = height > width;
   const pad = Math.round(Math.min(width, height) * 0.08);
@@ -541,7 +595,7 @@ function renderSocialQuote(
   ctx.fillText(props.brandName, pad, pad + 20);
 
   const quoteSize = isVertical ? Math.round(width * 0.068) : Math.round(height * 0.068);
-  ctx.fillStyle = '#F8FAFC';
+  ctx.fillStyle = palette.textPrimary;
   ctx.font = `700 ${quoteSize}px "Bricolage Grotesque", sans-serif`;
   const lines = wrapTextLines(ctx, revealedText, width - pad * 2, isVertical ? 6 : 4);
   lines.forEach((line, idx) => {
@@ -561,11 +615,11 @@ function renderSocialQuote(
     ctx.fillStyle = accent;
     ctx.fillRect(pad, blockY - 24, 56, 3);
 
-    ctx.fillStyle = '#FFFFFF';
+    ctx.fillStyle = palette.textPrimary;
     ctx.font = `700 ${Math.round(Math.min(width, height) * 0.034)}px "Plus Jakarta Sans", sans-serif`;
     ctx.fillText(props.authorName, pad, blockY + 14);
 
-    ctx.fillStyle = 'rgba(203, 213, 225, 0.78)';
+    ctx.fillStyle = palette.textSecondary;
     ctx.font = `400 ${Math.round(Math.min(width, height) * 0.024)}px "Plus Jakarta Sans", sans-serif`;
     ctx.fillText(props.authorRole, pad, blockY + 46);
 
@@ -575,7 +629,7 @@ function renderSocialQuote(
     ctx.restore();
   }
 
-  drawFooterBar(ctx, width, height, props.brandName, props.ctaText, accent, frame, fps);
+  drawFooterBar(ctx, width, height, props.brandName, props.ctaText, accent, frame, fps, palette);
 }
 
 export function renderCompositionFrame(params: RenderFrameParams): void {
@@ -596,11 +650,13 @@ export function renderCompositionFrame(params: RenderFrameParams): void {
       ? (props as { accentColor: string }).accentColor
       : '#E14D2A';
 
-  drawStageBackground(ctx, width, height, accentColor, frame, backdropImage);
+  const palette = getPalette((props as { skin?: VideoSkin }).skin);
+
+  drawStageBackground(ctx, width, height, accentColor, frame, palette, backdropImage);
 
   switch (templateId) {
     case 'kpi-digest':
-      renderKpiDigest(ctx, width, height, frame, fps, props as KpiDigestProps);
+      renderKpiDigest(ctx, width, height, frame, fps, props as KpiDigestProps, palette);
       break;
     case 'product-launch':
       renderProductLaunch(
@@ -610,6 +666,7 @@ export function renderCompositionFrame(params: RenderFrameParams): void {
         frame,
         fps,
         props as ProductLaunchProps,
+        palette,
         productImage
       );
       break;
@@ -620,11 +677,12 @@ export function renderCompositionFrame(params: RenderFrameParams): void {
         height,
         frame,
         fps,
-        props as PersonalizedOnboardingProps
+        props as PersonalizedOnboardingProps,
+        palette
       );
       break;
     case 'social-quote':
-      renderSocialQuote(ctx, width, height, frame, fps, props as SocialQuoteProps);
+      renderSocialQuote(ctx, width, height, frame, fps, props as SocialQuoteProps, palette);
       break;
   }
 }

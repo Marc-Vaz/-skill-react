@@ -52,6 +52,9 @@ const hexColorSchema = z
   .string()
   .regex(/^#[0-9A-Fa-f]{6}$/, 'Usa un color hexadecimal válido (ej. #E14D2A)');
 
+export const skinSchema = z.enum(['day', 'night']).default('night');
+export type VideoSkin = z.infer<typeof skinSchema>;
+
 export const MEXICAN_TTS_VOICES = [
   { id: 'es-MX-DaliaNeural', label: 'Dalia (es-MX · Femenina)' },
   { id: 'es-MX-JorgeNeural', label: 'Jorge (es-MX · Masculina)' },
@@ -84,6 +87,7 @@ export const kpiDigestSchema = z.object({
   period: z.string().min(1, 'Periodo obligatorio').max(32),
   headline: z.string().min(3, 'Titular obligatorio').max(90),
   accentColor: hexColorSchema,
+  skin: skinSchema,
   metrics: z
     .array(kpiMetricSchema)
     .min(2, 'Incluye al menos 2 métricas')
@@ -98,6 +102,7 @@ export const productLaunchSchema = z.object({
   tagline: z.string().min(4, 'Subtítulo obligatorio').max(100),
   price: z.string().min(1, 'Precio obligatorio').max(20),
   accentColor: hexColorSchema,
+  skin: skinSchema,
   imageUrl: z.string().min(1, 'Ruta de imagen obligatoria'),
   highlights: z
     .array(z.string().min(2, 'Característica vacía').max(58))
@@ -114,6 +119,7 @@ export const personalizedOnboardingSchema = z.object({
   planName: z.string().min(1, 'Plan obligatorio').max(36),
   accountManager: z.string().min(1, 'Ejecutivo de cuenta obligatorio').max(48),
   accentColor: hexColorSchema,
+  skin: skinSchema,
   nextSteps: z
     .array(z.string().min(3, 'Paso demasiado corto').max(64))
     .min(2, 'Incluye al menos 2 pasos')
@@ -129,6 +135,7 @@ export const socialQuoteSchema = z.object({
   authorRole: z.string().min(2, 'Cargo obligatorio').max(60),
   statHighlight: z.string().min(2, 'Dato de respaldo obligatorio').max(48),
   accentColor: hexColorSchema,
+  skin: skinSchema,
   ctaText: z.string().min(2, 'Llamado a la acción obligatorio').max(56),
   voiceover: voiceoverSchema,
 });
@@ -191,6 +198,7 @@ export const TEMPLATES: Record<TemplateId, TemplateDefinition> = {
       period: 'Q4 2026',
       headline: 'Crecimiento sostenido en ingresos recurrentes',
       accentColor: '#E14D2A',
+      skin: 'night',
       metrics: [
         { label: 'Ingresos MRR', value: '$428k', delta: '+34%', score: 88 },
         { label: 'Retención Neta', value: '118%', delta: '+6 pts', score: 94 },
@@ -215,6 +223,7 @@ export const TEMPLATES: Record<TemplateId, TemplateDefinition> = {
           period: 'Q4 2026',
           headline: 'Crecimiento sostenido en ingresos recurrentes',
           accentColor: '#E14D2A',
+          skin: 'night',
           metrics: [
             { label: 'Ingresos MRR', value: '$428k', delta: '+34%', score: 88 },
             { label: 'Retención Neta', value: '118%', delta: '+6 pts', score: 94 },
@@ -232,6 +241,7 @@ export const TEMPLATES: Record<TemplateId, TemplateDefinition> = {
           period: 'Octubre 2026',
           headline: 'Entregas puntuales en toda la red regional',
           accentColor: '#0D9488',
+          skin: 'day',
           metrics: [
             { label: 'Entregas a tiempo', value: '98.6%', delta: '+2.4%', score: 98 },
             { label: 'Envíos procesados', value: '64.2k', delta: '+19%', score: 84 },
@@ -264,6 +274,7 @@ export const TEMPLATES: Record<TemplateId, TemplateDefinition> = {
       tagline: 'Control de estudio CNC de aluminio anodizado con respuesta háptica',
       price: '$349 USD',
       accentColor: '#D97706',
+      skin: 'night',
       imageUrl: GENERATED_PRODUCT_IMAGE,
       highlights: [
         'Conversor DAC 32-bit / 384 kHz sin latencia',
@@ -282,6 +293,7 @@ export const TEMPLATES: Record<TemplateId, TemplateDefinition> = {
           tagline: 'Control de estudio CNC de aluminio anodizado con respuesta háptica',
           price: '$349 USD',
           accentColor: '#D97706',
+          skin: 'night',
           imageUrl: GENERATED_PRODUCT_IMAGE,
           highlights: [
             'Conversor DAC 32-bit / 384 kHz sin latencia',
@@ -300,6 +312,7 @@ export const TEMPLATES: Record<TemplateId, TemplateDefinition> = {
           tagline: 'Interfaz de escritorio con calibración acústica automatizada',
           price: '$489 USD',
           accentColor: '#E14D2A',
+          skin: 'day',
           imageUrl: GENERATED_PRODUCT_IMAGE,
           highlights: [
             'Preamp transparente con +72 dB de ganancia limpia',
@@ -334,6 +347,7 @@ export const TEMPLATES: Record<TemplateId, TemplateDefinition> = {
       planName: 'Plan Enterprise',
       accountManager: 'Diego Salgado',
       accentColor: '#2563EB',
+      skin: 'night',
       nextSteps: [
         'Conectar origen de datos PostgreSQL o HubSpot',
         'Invitar al equipo comercial y asignar permisos',
@@ -352,6 +366,7 @@ export const TEMPLATES: Record<TemplateId, TemplateDefinition> = {
           planName: 'Plan Enterprise',
           accountManager: 'Diego Salgado',
           accentColor: '#2563EB',
+          skin: 'night',
           nextSteps: [
             'Conectar origen de datos PostgreSQL o HubSpot',
             'Invitar al equipo comercial y asignar permisos',
@@ -370,6 +385,7 @@ export const TEMPLATES: Record<TemplateId, TemplateDefinition> = {
           planName: 'Plan Escala',
           accountManager: 'Camila Navarro',
           accentColor: '#16A34A',
+          skin: 'day',
           nextSteps: [
             'Importar plantillas de reporte clínico semanal',
             'Configurar webhooks hacia tu agente de IA',
@@ -404,6 +420,7 @@ export const TEMPLATES: Record<TemplateId, TemplateDefinition> = {
       authorRole: 'Directora de Operaciones en Verba',
       statHighlight: '1,200 videos diarios en menos de 9 minutos',
       accentColor: '#E14D2A',
+      skin: 'night',
       ctaText: 'Conoce la arquitectura del plugin',
     },
     presets: [
@@ -418,6 +435,7 @@ export const TEMPLATES: Record<TemplateId, TemplateDefinition> = {
           authorRole: 'Directora de Operaciones en Verba',
           statHighlight: '1,200 videos diarios en menos de 9 minutos',
           accentColor: '#E14D2A',
+          skin: 'night',
           ctaText: 'Conoce la arquitectura del plugin',
         },
       },
@@ -432,6 +450,7 @@ export const TEMPLATES: Record<TemplateId, TemplateDefinition> = {
           authorRole: 'Líder de Producto en Pulso',
           statHighlight: '+41% tasa de compartidos en LinkedIn',
           accentColor: '#0D9488',
+          skin: 'day',
           ctaText: 'Explora la integración con agentes IA',
         },
       },

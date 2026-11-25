@@ -18,7 +18,10 @@ import {
   generateRemotionTsx,
   generateRestSnippet,
   buildRemotionCliCommand,
+  generateSkillMarkdown,
+  buildFrameHookBundleEntries,
 } from './codeGenerators';
+import { buildZipArchive } from './zipBuilder';
 
 test('interpolate clamps boundaries and scales linearly', () => {
   assert.equal(interpolate(5, [0, 10], [0, 100]), 50);
@@ -153,3 +156,51 @@ test('voiceover schema and generators inject Remotion Audio and edge-tts command
   assert.ok(rest.includes('edge-tts --voice "es-MX-JorgeNeural"'));
   assert.ok(rest.includes('public/audio/reporte-q4.mp3'));
 });
+
+test('skin parameter validates day/night and switches Remotion TSX theme colors', () => {
+  const dayProps = {
+    ...TEMPLATES['kpi-digest'].defaultProps,
+    skin: 'day' as const,
+  };
+  const nightProps = {
+    ...TEMPLATES['kpi-digest'].defaultProps,
+    skin: 'night' as const,
+  };
+
+  assert.equal(validateCompositionProps('kpi-digest', dayProps).valid, true);
+  assert.equal(validateCompositionProps('kpi-digest', nightProps).valid, true);
+  assert.equal(
+    validateCompositionProps('kpi-digest', { ...dayProps, skin: 'sunset' }).valid,
+    false
+  );
+
+  const tsxDay = generateRemotionTsx('kpi-digest', '16:9', dayProps);
+  assert.ok(tsxDay.includes('"skin": "day"'));
+  assert.ok(tsxDay.includes('isDaySkin ? "#F8FAFC" : "#0C0F14"'));
+});
+
+test('generateSkillMarkdown and buildZipArchive package SKILL.md and sister folder architecture into valid PKZIP', () => {
+  const props = TEMPLATES['kpi-digest'].defaultProps;
+  const skillMd = generateSkillMarkdown('kpi-digest', '16:9', props, {
+    panoraPath: '../remotion-panora-mcp',
+    factoryPath: '../remotion-video-factory',
+  });
+
+  assert.ok(skillMd.includes('name: framehook'));
+  assert.ok(skillMd.includes('../remotion-panora-mcp/'));
+  assert.ok(skillMd.includes('../remotion-video-factory/'));
+  assert.ok(skillMd.includes('edge-tts'));
+
+  const entries = buildFrameHookBundleEntries('kpi-digest', '16:9', props, skillMd);
+  assert.equal(entries.length, 7);
+  assert.equal(entries[0].path, 'framehook/SKILL.md');
+
+  const zipBytes = buildZipArchive(entries);
+  assert.ok(zipBytes.byteLength > 200);
+  const view = new DataView(zipBytes.buffer);
+  // PKZIP local file header signature 0x04034b50
+  assert.equal(view.getUint32(0, true), 0x04034b50);
+  // PKZIP EOCD signature 0x06054b50 at the end (22 bytes from end)
+  assert.equal(view.getUint32(zipBytes.byteLength - 22, true), 0x06054b50);
+});
+

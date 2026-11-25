@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Check, AlertCircle, RotateCcw, Upload, Volume2 } from 'lucide-react';
+import { Check, AlertCircle, RotateCcw, Upload, Volume2, Sun, Moon } from 'lucide-react';
 import {
   MEXICAN_TTS_VOICES,
   TEMPLATES,
@@ -204,6 +204,44 @@ export const PropsInspector: React.FC<PropsInspectorProps> = ({
                   onChange={(e) => handleFieldPatch({ brandName: e.target.value })}
                   className="w-full min-w-0 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:border-slate-400"
                 />
+              </div>
+
+              <div>
+                <span className="block text-xs font-medium text-slate-700 mb-1">
+                  Skin del video (Día / Noche)
+                </span>
+                <div
+                  className="grid grid-cols-2 gap-1.5 rounded-lg bg-slate-100 p-1 border border-slate-200"
+                  role="group"
+                  aria-label="Skin del video"
+                >
+                  <button
+                    type="button"
+                    onClick={() => handleFieldPatch({ skin: 'day' })}
+                    aria-pressed={props.skin === 'day'}
+                    className={`inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors whitespace-nowrap cursor-pointer ${
+                      props.skin === 'day'
+                        ? 'bg-white text-slate-900 shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <Sun className="w-3.5 h-3.5 text-amber-500" />
+                    <span>Skin de Día</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleFieldPatch({ skin: 'night' })}
+                    aria-pressed={(props.skin ?? 'night') === 'night'}
+                    className={`inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors whitespace-nowrap cursor-pointer ${
+                      (props.skin ?? 'night') === 'night'
+                        ? 'bg-slate-900 text-white shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <Moon className="w-3.5 h-3.5" />
+                    <span>Skin de Noche</span>
+                  </button>
+                </div>
               </div>
 
               <div>

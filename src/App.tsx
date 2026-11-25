@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, Moon, Sun } from 'lucide-react';
 import {
   TEMPLATES,
   type AspectRatioId,
@@ -20,6 +20,7 @@ import { BatchAutomationView } from './components/BatchAutomationView';
 import { PluginSdkView } from './components/PluginSdkView';
 
 type ActiveView = 'studio' | 'agent' | 'batch' | 'sdk';
+type UiTheme = 'day' | 'night';
 
 const NAV_ITEMS: Array<{ id: ActiveView; label: string }> = [
   { id: 'studio', label: 'Estudio' },
@@ -31,6 +32,23 @@ const NAV_ITEMS: Array<{ id: ActiveView; label: string }> = [
 export default function App() {
   const [activeView, setActiveView] = useState<ActiveView>('studio');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [uiTheme, setUiTheme] = useState<UiTheme>(() => {
+    try {
+      const saved = window.localStorage.getItem('framehook-ui-theme');
+      return saved === 'night' || saved === 'day' ? saved : 'day';
+    } catch {
+      return 'day';
+    }
+  });
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('theme-night', uiTheme === 'night');
+    try {
+      window.localStorage.setItem('framehook-ui-theme', uiTheme);
+    } catch {
+      // Ignore storage errors in restricted environments
+    }
+  }, [uiTheme]);
 
   const [templateId, setTemplateId] = useState<TemplateId>('kpi-digest');
   const [aspectRatio, setAspectRatio] = useState<AspectRatioId>('16:9');
@@ -217,8 +235,13 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] text-slate-900 flex flex-col">
-      {/* Strict 3-Zone Top Bar Contract */}
+    <div
+      data-ui-theme={uiTheme}
+      className={`min-h-screen bg-[#F8FAFC] text-slate-900 flex flex-col transition-colors ${
+        uiTheme === 'night' ? 'theme-night' : ''
+      }`}
+    >
+      {/* Top Bar */}
       <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-xs border-b border-slate-200">
         <div className="max-w-[1440px] mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-8">
           {/* Zone 1: Single-element wordmark */}
@@ -258,8 +281,33 @@ export default function App() {
             })}
           </nav>
 
-          {/* Zone 3: 1 Primary CTA (+ mobile menu trigger on small screens) */}
-          <div className="flex items-center gap-2 shrink-0">
+          {/* Zone 3: Global UI Theme Toggle + Primary CTA (+ mobile menu trigger on small screens) */}
+          <div className="flex items-center gap-2.5 shrink-0">
+            <button
+              type="button"
+              data-testid="ui-theme-toggle"
+              onClick={() => setUiTheme((prev) => (prev === 'night' ? 'day' : 'night'))}
+              aria-pressed={uiTheme === 'night'}
+              aria-label={
+                uiTheme === 'night'
+                  ? 'Cambiar interfaz a modo de día'
+                  : 'Cambiar interfaz a modo de noche'
+              }
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-medium text-slate-700 hover:bg-slate-50 transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+            >
+              {uiTheme === 'night' ? (
+                <>
+                  <Sun className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Interfaz: Noche</span>
+                </>
+              ) : (
+                <>
+                  <Moon className="w-3.5 h-3.5 text-slate-600" />
+                  <span>Interfaz: Día</span>
+                </>
+              )}
+            </button>
+
             <button
               type="button"
               onClick={handleRenderVideo}
@@ -345,6 +393,9 @@ export default function App() {
                 aspectRatio={aspectRatio}
                 onAspectRatioChange={setAspectRatio}
                 props={currentProps}
+                onSkinChange={(skin) =>
+                  handleUpdateCurrentProps({ ...currentProps, skin } as CompositionProps)
+                }
                 frame={frame}
                 onFrameChange={setFrame}
                 isPlaying={isPlaying}
